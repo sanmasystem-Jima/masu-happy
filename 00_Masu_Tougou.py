@@ -89,6 +89,42 @@ def print_header(title):
     print_separator()
 
 
+def set_hidden_attribute(path, hidden=True):
+    """Windows で出力フォルダを隠し属性にします。"""
+    if os.name != "nt":
+        return
+
+    import ctypes
+
+    FILE_ATTRIBUTE_HIDDEN = 0x2
+    INVALID_FILE_ATTRIBUTES = -1
+
+    try:
+        attrs = ctypes.windll.kernel32.GetFileAttributesW(str(path))
+        if attrs == INVALID_FILE_ATTRIBUTES:
+            return
+
+        if hidden:
+            new_attrs = attrs | FILE_ATTRIBUTE_HIDDEN
+        else:
+            new_attrs = attrs & ~FILE_ATTRIBUTE_HIDDEN
+
+        ctypes.windll.kernel32.SetFileAttributesW(str(path), new_attrs)
+    except Exception:
+        pass
+
+
+def hide_output_tree(path):
+    """出力フォルダ配下を再帰的に隠し属性にします。"""
+    if not path.exists():
+        return
+
+    for root, dirs, files in os.walk(path):
+        current_root = Path(root)
+        for name in dirs + files:
+            set_hidden_attribute(current_root / name, True)
+
+
 # ==========================================
 # メイン処理
 # ==========================================
@@ -139,11 +175,15 @@ def run_session(base_dir, tools_dir, prev_params_path=None, skip_input=False):
         output_dir = prev_params_path.parent
         shutil.copy2(str(temp_params), str(output_dir / "masu_params.json"))
         temp_params.unlink()
+        set_hidden_attribute(output_dir, True)
+        hide_output_tree(output_dir)
     else:
         # 新規入力の場合 → 新フォルダを作成
         output_dir = make_output_folder_name(base_dir, temp_params)
         output_dir.mkdir(parents=True, exist_ok=True)
         shutil.move(str(temp_params), str(output_dir / "masu_params.json"))
+        set_hidden_attribute(output_dir, True)
+        hide_output_tree(output_dir)
 
     print(f"  出力フォルダ: {output_dir.name}")
 

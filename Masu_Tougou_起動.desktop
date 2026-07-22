@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=桝Happy(集水桝ツール)
+Comment=集水桝 一括生成ツールを起動します(引数不要、ダブルクリックで起動)
+Exec=qterminal -e /media/jima/ボリューム/桝Happy/Masu_Tougou_起動.sh
+Icon=system-run
+Terminal=false
+Categories=Utility;
