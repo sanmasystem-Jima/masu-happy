@@ -54,6 +54,8 @@ def setup_dimstyle(doc, scale_n):
     ds.dxf.dimblk  = "OPEN"
     ds.dxf.dimblk1 = "OPEN"
     ds.dxf.dimblk2 = "OPEN"
+    ds.dxf.dimdec  = 0       # 端数非表示（座標はmm単位のため整数表示）
+    ds.dxf.dimrnd  = 1       # 1mm単位に四捨五入（数量計算書と一致させる）
     return sname
 
 

@@ -70,6 +70,8 @@ def setup_dimstyle(doc, scale_n):
     dstyle.dxf.dimblk  = "OPEN"
     dstyle.dxf.dimblk1 = "OPEN"
     dstyle.dxf.dimblk2 = "OPEN"
+    dstyle.dxf.dimdec  = 0       # 端数非表示（座標はmm単位のため整数表示）
+    dstyle.dxf.dimrnd  = 1       # 1mm単位に四捨五入（数量計算書と一致させる）
 
     return style_name
 

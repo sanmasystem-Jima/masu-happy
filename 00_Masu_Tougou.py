@@ -38,6 +38,15 @@ STEP_LABELS = {
     9: "YZ寸法線",
 }
 
+# 成果品として最終的にデスクトップへ書き出すファイル（DXF4個 + 数量計算書）
+DELIVERABLE_FILES = [
+    "masu_3d.dxf",
+    "masu_XY.dxf",
+    "masu_XZ.dxf",
+    "masu_YZ.dxf",
+    "masu_suuryou.txt",
+]
+
 # ==========================================
 # ユーティリティ
 # ==========================================
@@ -123,6 +132,32 @@ def hide_output_tree(path):
         current_root = Path(root)
         for name in dirs + files:
             set_hidden_attribute(current_root / name, True)
+
+
+def get_desktop_dir():
+    return Path.home() / "Desktop"
+
+
+def export_deliverables(output_dir):
+    """DXF4個と数量計算書を、デスクトップ上のフォルダに書き出します。"""
+    desktop_dir = get_desktop_dir()
+    dest_name = output_dir.name
+    if dest_name.startswith("output_"):
+        dest_name = dest_name[len("output_"):]
+    dest_dir = desktop_dir / dest_name
+
+    dest_dir.mkdir(parents=True, exist_ok=True)
+
+    copied, missing = [], []
+    for fname in DELIVERABLE_FILES:
+        src = output_dir / fname
+        if src.exists():
+            shutil.copy2(str(src), str(dest_dir / fname))
+            copied.append(fname)
+        else:
+            missing.append(fname)
+
+    return dest_dir, copied, missing
 
 
 # ==========================================
@@ -226,19 +261,28 @@ def run_session(base_dir, tools_dir, prev_params_path=None, skip_input=False):
 
         results.append((step_no, label, "OK", " / ".join(required_files)))
 
-    print_summary(results, output_dir)
+    desktop_dir, copied, missing_deliverables = export_deliverables(output_dir)
+    if missing_deliverables:
+        results.append((None, "成果品書き出し", "ERROR", f"見つからず: {missing_deliverables}"))
+    else:
+        results.append((None, "成果品書き出し", "OK", desktop_dir.name))
+
+    print_summary(results, output_dir, desktop_dir)
     return output_dir
 
 
-def print_summary(results, output_dir):
+def print_summary(results, output_dir, desktop_dir=None):
     print()
     print_header("集水桝 一括生成ツール 完了サマリー")
     for step_no, label, status, note in results:
         tag = f"[{status:<4}]"
-        print(f"  {tag}  {step_no:02d} {label:<12}  {note}")
+        no_str = f"{step_no:02d}" if step_no is not None else "  "
+        print(f"  {tag}  {no_str} {label:<12}  {note}")
     print_separator()
     if output_dir:
         print(f"  出力フォルダ: {output_dir}")
+    if desktop_dir:
+        print(f"  成果品フォルダ（デスクトップ）: {desktop_dir}")
     print_separator()
 
 
