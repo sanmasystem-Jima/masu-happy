@@ -34,6 +34,7 @@ import sys
 PARAM_FILE = "masu_params.json"
 
 DEFAULT_PARAMS = {
+    "プロジェクト名": "",
     "地盤条件": {
         "突出有無":     "無",
         "突出高さ":     0.0,
@@ -133,6 +134,25 @@ def section(title):
 # ==========================================
 # 入力ロジック
 # ==========================================
+
+def input_project_name(p):
+    """
+    プロジェクト名。保存フォルダ名（デスクトップの成果品フォルダ名も含む）
+    にそのまま使われるため、空欄は許可しない。
+    """
+    section("プロジェクト名")
+    existing = p.get("プロジェクト名", "")
+    while True:
+        default_str = existing if existing else "-"
+        val = input(f"  プロジェクト名（保存フォルダ名になります） [現在: {default_str}] > ").strip()
+        if val == "":
+            if existing:
+                return
+            print("    ※ プロジェクト名を入力してください。")
+            continue
+        p["プロジェクト名"] = val
+        return
+
 
 def input_chibanjouten(p):
     section("地盤条件")
@@ -323,6 +343,7 @@ def print_confirm(p):
     g = p["グレーチング"]
 
     print("\n  ── 入力確認 ─────────────────────────")
+    print(f"  プロジェクト名: {p.get('プロジェクト名', '')}")
     print(f"  内腔寸法    : X={n['X']}M  Y={n['Y']}M  Z低={n['Z低']}M")
     print(f"  壁厚/底版厚 : {s['壁厚']}M / {s['底版厚']}M")
     print(f"  砕石        : 厚={s['砕石厚']}M  張出={s['砕石張出']}M")
@@ -376,6 +397,7 @@ def main():
         p = copy.deepcopy(DEFAULT_PARAMS)
         print("\n  初回起動 - デフォルト値で開始します。")
 
+    input_project_name(p)
     input_chibanjouten(p)
     input_naikosunpo(p)
     input_kozosupo(p)

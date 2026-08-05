@@ -5,6 +5,7 @@
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -59,20 +60,36 @@ def yn_input(prompt):
         print("  ※ Y か N を入力してください。")
 
 
+INVALID_FOLDER_CHARS = re.compile(r'[\\/:*?"<>|]')
+
+
+def sanitize_folder_name(name):
+    """フォルダ名として使えない文字を置換します。"""
+    name = INVALID_FOLDER_CHARS.sub("_", name).strip()
+    name = name.rstrip(". ")
+    return name or "Masu"
+
+
 def make_output_folder_name(base_dir, params_path):
     try:
         with open(params_path, "r", encoding="utf-8") as f:
             p = json.load(f)
-        x  = p["内腔寸法"]["X"]
-        y  = p["内腔寸法"]["Y"]
-        zl = p["内腔寸法"]["Z低"]
 
-        def fmt(v):
-            s = f"{v:.4f}".rstrip("0")
-            if s.endswith("."): s += "0"
-            return s
+        project_name = str(p.get("プロジェクト名", "")).strip()
+        if project_name:
+            base_name = f"output_{sanitize_folder_name(project_name)}"
+        else:
+            # プロジェクト名が無い（旧形式の）場合は寸法から自動命名
+            x  = p["内腔寸法"]["X"]
+            y  = p["内腔寸法"]["Y"]
+            zl = p["内腔寸法"]["Z低"]
 
-        base_name = f"output_Masu_{fmt(x)}×{fmt(y)}×{fmt(zl)}"
+            def fmt(v):
+                s = f"{v:.4f}".rstrip("0")
+                if s.endswith("."): s += "0"
+                return s
+
+            base_name = f"output_Masu_{fmt(x)}×{fmt(y)}×{fmt(zl)}"
     except Exception:
         base_name = "output_Masu"
 
@@ -136,6 +153,21 @@ def hide_output_tree(path):
 
 def get_desktop_dir():
     return Path.home() / "Desktop"
+
+
+def open_folder(path):
+    """OSのファイルマネージャでフォルダを開きます。"""
+    try:
+        if os.name == "nt":
+            os.startfile(str(path))
+        elif sys.platform == "darwin":
+            subprocess.run(["open", str(path)], check=False)
+        else:
+            subprocess.run(["xdg-open", str(path)], check=False)
+        return True
+    except Exception as e:
+        print(f"  [警告] フォルダを開けませんでした: {e}")
+        return False
 
 
 def export_deliverables(output_dir):
@@ -268,7 +300,7 @@ def run_session(base_dir, tools_dir, prev_params_path=None, skip_input=False):
         results.append((None, "成果品書き出し", "OK", desktop_dir.name))
 
     print_summary(results, output_dir, desktop_dir)
-    return output_dir
+    return output_dir, desktop_dir
 
 
 def print_summary(results, output_dir, desktop_dir=None):
@@ -312,7 +344,7 @@ def main():
     existing_folders = sorted([
         d for d in base_dir.iterdir()
         if d.is_dir()
-        and d.name.startswith("output_Masu_")
+        and d.name.startswith("output_")
         and (d / "masu_params.json").exists()
     ])
 
@@ -348,9 +380,14 @@ def main():
         print(f"  桝 {session} 枚目の処理を開始します")
         print(f"{'='*50}")
 
-        output_dir = run_session(base_dir, tools_dir, prev_params_path, skip_input)
+        output_dir, desktop_dir = run_session(base_dir, tools_dir, prev_params_path, skip_input)
 
         print()
+        if desktop_dir and yn_input("成果品フォルダを開きますか？"):
+            open_folder(desktop_dir)
+            print("\n  終了します。お疲れ様でした。")
+            return
+
         if not yn_input("続いて次の集水桝の入力をしますか？"):
             print("\n  終了します。お疲れ様でした。")
             break
@@ -365,7 +402,7 @@ def main():
         existing_folders = sorted([
             d for d in base_dir.iterdir()
             if d.is_dir()
-            and d.name.startswith("output_Masu_")
+            and d.name.startswith("output_")
             and (d / "masu_params.json").exists()
         ])
 
