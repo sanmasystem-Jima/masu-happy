@@ -48,6 +48,15 @@ DELIVERABLE_FILES = [
     "masu_suuryou.txt",
 ]
 
+# 全ステップ完了後、作業フォルダから削除する中間ファイル
+# （masu_params.json は「既存条件を使用」で再利用するため残す）
+INTERMEDIATE_FILES = [
+    "masu_coords.json",
+    "dimension_XY.json",
+    "dimension_XZ.json",
+    "dimension_YZ.json",
+]
+
 # ==========================================
 # ユーティリティ
 # ==========================================
@@ -192,6 +201,17 @@ def export_deliverables(output_dir):
     return dest_dir, copied, missing
 
 
+def cleanup_intermediate_files(output_dir):
+    """作業フォルダから、計算専用の中間ファイル（座標・寸法線JSON）を削除します。"""
+    removed = []
+    for fname in INTERMEDIATE_FILES:
+        target = output_dir / fname
+        if target.exists():
+            target.unlink()
+            removed.append(fname)
+    return removed
+
+
 # ==========================================
 # メイン処理
 # ==========================================
@@ -298,6 +318,9 @@ def run_session(base_dir, tools_dir, prev_params_path=None, skip_input=False):
         results.append((None, "成果品書き出し", "ERROR", f"見つからず: {missing_deliverables}"))
     else:
         results.append((None, "成果品書き出し", "OK", desktop_dir.name))
+
+    removed = cleanup_intermediate_files(output_dir)
+    results.append((None, "中間ファイル削除", "OK", " / ".join(removed) if removed else "対象なし"))
 
     print_summary(results, output_dir, desktop_dir)
     return output_dir, desktop_dir
